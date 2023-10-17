@@ -44,8 +44,25 @@ try:
         domain_list.append(td_element.text)
 
     # Print the extracted domain names
-    print(domain_list)
+    print(domain_list) 
 
+    # List of URLs
+    # Add "https://" before each URL in the list
+    formatted_urls = ['https://' + url if not url.startswith(('http://', 'https://')) else url for url in domain_list]
+
+    print(formatted_urls)
+    ## now I have got the urls so now iterate over the 5 urls to capture screenshots
+    ## before doing above part add https:// to each element
+    co = 0
+    for link in formatted_urls:
+        if(co > 5):
+            break 
+        driver.get(link)   
+        time.sleep(5) 
+        screenshot_path = f"./screenshot{co}.png"
+        driver.save_screenshot(screenshot_path)
+        co+=1
+        driver.close()
     # Perform further actions with the driver...
 
 finally:

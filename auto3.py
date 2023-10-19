@@ -1,71 +1,65 @@
+import csv
 from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
 from webdriver_manager.chrome import ChromeDriverManager
 from selenium.webdriver.chrome.service import Service
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
 import time
 
-options = webdriver.ChromeOptions()
-# Add any additional options if needed
-user_agent = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/112.0.0.0 Safari/537.36"
-options.add_argument(f"user-agent={user_agent}")
-# options.add_argument("--headless")
+# Define user agents
+user_agents = {
+    "googleua": "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)",
+    "googlebotua": "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)"
+}
+
+# Common options for the Chrome driver
+common_options = webdriver.ChromeOptions()
+# common_options.add_argument("--headless")  # Run Chrome in headless mode (no GUI)
+
+# Initialize the Chrome driver outside of the loop
+driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=common_options)
+
+co = 1
 
 try:
-    # Automatically download and install ChromeDriver
-    driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
+    # Read URLs from the CSV file and iterate over them
+    with open('tranco.csv', 'r') as csvfile:
+        csv_reader = csv.reader(csvfile)
+        
+        for row in csv_reader:
 
-    # Navigate to Google Scholar
-    driver.get("https://dnstwister.report/")
+            if(co>5):
+                break
+            tranco_number, original_domain = row[0], row[1]
 
-    # Wait for a few seconds to let the page load completely
-    time.sleep(3)
+            # Navigate to DNSTwister report page
+            driver.get("https://dnstwister.report/")
 
-    # Find the search input field using its name attribute and send keys
-    search_input = driver.find_element("name", "domains")
-    search_input.send_keys("google.com")
+            # Wait for a few seconds to let the page load completely
+            time.sleep(3)
 
-    # Simulate pressing the Enter key
-    search_input.send_keys(Keys.RETURN)
+            # Find the search input field using its name attribute and send keys
+            search_input = driver.find_element("name", "domains")
+            search_input.clear()  # Clear any previous input
+            search_input.send_keys(original_domain)
 
-    # Wait until the 'qs_rs' div element is present on the page
-    time.sleep(90)
+            # Simulate pressing the Enter key
+            search_input.send_keys(Keys.RETURN)
 
+            # Wait until the 'qs_rs' div element is present on the page
+            time.sleep(90)
 
-    td_elements = driver.find_elements("xpath", "//table[@id='main_report']//tbody//tr//td[1]")
+            # Find and format URLs
+            td_elements = driver.find_elements("xpath", "//table[@id='main_report']//tbody//tr//td[1]")
+            domain_list = [td_element.text for td_element in td_elements]
+            formatted_urls = ['https://' + url if not url.startswith(('http://', 'https://')) else url for url in domain_list]
 
-# Create a list to store the extracted text
-    domain_list = []
-
-# Iterate through the found elements and extract text, then append to the list
-    for td_element in td_elements:
-        domain_list.append(td_element.text)
-
-    # Print the extracted domain names
-    print(domain_list) 
-
-    # List of URLs
-    # Add "https://" before each URL in the list
-    formatted_urls = ['https://' + url if not url.startswith(('http://', 'https://')) else url for url in domain_list]
-
-    print(formatted_urls)
-    ## now I have got the urls so now iterate over the 5 urls to capture screenshots
-    ## before doing above part add https:// to each element
-    co = 0
-    for link in formatted_urls:
-        if(co > 5):
-            break 
-        driver.get(link)   
-        time.sleep(5) 
-        screenshot_path = f"./screenshot{co}.png"
-        driver.save_screenshot(screenshot_path)
-        co+=1
-        driver.close()
-    # Perform further actions with the driver...
+            # Write formatted URLs to a CSV file named after the original domain
+            with open(f'{original_domain}_twisted.csv', 'w', newline='') as csv_file:
+                csv_writer = csv.writer(csv_file)
+                csv_writer.writerow(['Twisted URLs'])  # Write header
+                csv_writer.writerows([[url] for url in formatted_urls])  # Write each URL on a new line
+            co += 1    
 
 finally:
-    # Close the browser window if the driver is defined
-    if driver:
-        driver.quit()
+    # Close the browser window
+    driver.quit()
